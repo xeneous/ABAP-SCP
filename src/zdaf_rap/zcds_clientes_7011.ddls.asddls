@@ -17,9 +17,9 @@ define view entity ZCDS_Clientes_7011
 {
   key clLib.id_libro  as IdLibro,
   key Cli.id_cliente  as IdCliente,
-  key Cli.tipo_acceso as TipoAcceso,
+  key Cli.tipo_acceso as Acceso,
       Cli.nombre      as Nombre,
       Cli.apellidos   as Apellidos,
-      Cli.emmail      as Emmail,
+      Cli.emmail      as Email,
       Cli.url         as Imagen
 }

@@ -7,6 +7,9 @@
     sizeCategory: #S,
     dataClass: #MIXED
 }
+
+@Metadata.allowExtensions: true
+
 define view entity ZCDS_Libros_7011
   as select from    ztb_libros_7011     as Libros
     inner join      ZCDS_Categ_7011     as Categ on Libros.bi_categ = Categ.Categoria
