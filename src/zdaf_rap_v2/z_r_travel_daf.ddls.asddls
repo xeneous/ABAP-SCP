@@ -11,6 +11,12 @@ define root view entity Z_R_TRAVEL_DAF
   as select from ztb_travel_daf
   
   composition [0..*] of Z_R_BOOKING_DAF as _Booking
+  
+  association [0..1] to /DMO/I_Agency as _Agency on $projection.AgencyID = _Agency.AgencyID
+  association [0..1] to /DMO/I_Customer as _Customer on $projection.CustomerID = _Customer.CustomerID
+  association [0..1] to /DMO/I_Overall_Status_VH as _Overal_Status on $projection.OverallStatus = _Overal_Status.OverallStatus
+  association [0..1] to I_Currency as _Currency on $projection.CurrencyCode = _Currency.Currency
+  
 {
   key travel_uuid           as TravelUUID,
       travel_id             as TravelID,
@@ -35,5 +41,10 @@ define root view entity Z_R_TRAVEL_DAF
       local_last_changed_at as LocalLastChangedAt,
       @Semantics.systemDateTime.lastChangedAt: true
       last_changed_at       as LastChangedAt,
-      _Booking
+      
+      _Booking ,
+      _Agency ,
+      _Customer ,
+      _Overal_Status
+      
 }
