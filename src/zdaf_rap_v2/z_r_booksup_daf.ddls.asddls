@@ -1,13 +1,16 @@
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Booking Supply Root entity'
+@EndUserText.label: 'Booking Supplement Root entity'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType:{
     serviceQuality: #X,
     sizeCategory: #S,
     dataClass: #MIXED
 }
-define view entity Z_R_BOOKSUP_DAF as select from ztb_booksup_daf
+define view entity Z_R_BOOKSUP_DAF 
+    as select from ztb_booksup_daf
+    
+    association to parent Z_R_BOOKING_DAF as _Booking on $projection.BookingUUID = _Booking.BookingUUID
 {
     key booksuppl_uuid as BooksupplUUID,
     key travel_uuid as TravelUUID,
@@ -18,5 +21,7 @@ define view entity Z_R_BOOKSUP_DAF as select from ztb_booksup_daf
     price as Price,
     currency_code as CurrencyCode,
     @Semantics.systemDateTime.lastChangedAt: true
-    last_changed_at as LastChangedAt
+    last_changed_at as LastChangedAt,
+     
+    _Booking
 }

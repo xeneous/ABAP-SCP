@@ -10,7 +10,10 @@
 define view entity Z_R_BOOKING_DAF 
     as select from ztb_booking_daf
     
-    association to parent Z_R_TRAVEL_DAF as _Travel on $projection.TravelUUID = _Travel.TravelUuid
+    association to parent Z_R_TRAVEL_DAF as _Travel on $projection.TravelUUID = _Travel.TravelUUID
+    
+    composition [0..*] of Z_R_BOOKSUP_DAF as _BookingSupplement
+    
 {
     key booking_uuid as BookingUUID,
     parent_uuid as TravelUUID,
@@ -26,5 +29,6 @@ define view entity Z_R_BOOKING_DAF
     booking_status as BookingStatus,
     @Semantics.systemDateTime.lastChangedAt: true
     last_changed_at as LastChangedAt, 
-    _Travel
+    _Travel ,
+    _BookingSupplement
 }
