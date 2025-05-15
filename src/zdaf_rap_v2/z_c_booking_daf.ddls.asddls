@@ -99,7 +99,7 @@ define view entity Z_C_BOOKING_DAF
       @Semantics.amount.currencyCode: 'CurrencyCode'
 
       @Consumption.valueHelpDefinition: [{ entity : {   name: '/DMO/I_Flight_StdVH',
-                                                        element: 'FlightPrice' },
+                                                        element: 'Price' },
                                                       
                                                         additionalBinding: [                                                                           
                                                                               { localElement: 'AirlineID',
@@ -122,34 +122,24 @@ define view entity Z_C_BOOKING_DAF
       
       FlightPrice,
       
-      @Consumption.valueHelpDefinition: [{ entity : {   name: '/DMO/I_Flight_StdVH',
+      @Consumption.valueHelpDefinition: [{ entity : {   name: 'I_CurrencyStdVH',
                                                         element: 'CurrencyCode' },
-                                                      
-                                                        additionalBinding: [                                                                           
-                                                                              { localElement: 'AirlineID',
-                                                                                element: 'AirlineID',
-                                                                                usage: #FILTER_AND_RESULT },
-    
-                                                                              { localElement: 'ConnectionID',
-                                                                                element: 'ConnectionID',
-                                                                                usage: #FILTER_AND_RESULT },
-                                                                                
-                                                                              { localElement: 'FlightDate',
-                                                                                element: 'FlightDate',
-                                                                                usage: #FILTER_AND_RESULT },
-                                                                                
-                                                                              { localElement: 'FlightPrice',
-                                                                                element: 'Price',
-                                                                                usage: #FILTER_AND_RESULT } ] ,                                                                            
-                                                                             
                                                         useForValidation: true } ]
       
       CurrencyCode,
+      
+      @ObjectModel.text.element: [ 'BookingStatusText' ]
+      @Consumption.valueHelpDefinition: [{ entity : { name: '/DMO/I_Booking_Status_VH',
+                                                      element: 'BookingStatus' },
+                                                      useForValidation: true } ]      
+      
       BookingStatus,
+      _BookingStatus._Text.Text as BookingStatusText : localized ,
       LastChangedAt,
       /* Associations */
       _BookingStatus,
-      _BookingSupplement,
+      _BookingSupplement : redirected to composition child Z_C_BOOKSUP_DAF ,
+      
       _Carrier,
       _Connection,
       _Customer,
