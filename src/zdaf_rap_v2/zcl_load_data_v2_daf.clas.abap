@@ -11,7 +11,8 @@ ENDCLASS.
 
 
 
-CLASS zcl_load_data_v2_DAF IMPLEMENTATION.
+CLASS ZCL_LOAD_DATA_V2_DAF IMPLEMENTATION.
+
 
     METHOD if_oo_adt_classrun~main .
     delete from ztb_travel_DAF.
@@ -95,5 +96,4 @@ CLASS zcl_load_data_v2_DAF IMPLEMENTATION.
     ).
 
     ENDMETHOD .
-
 ENDCLASS.

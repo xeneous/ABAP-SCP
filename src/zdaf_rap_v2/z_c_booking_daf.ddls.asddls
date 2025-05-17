@@ -136,6 +136,7 @@ define view entity Z_C_BOOKING_DAF
       BookingStatus,
       _BookingStatus._Text.Text as BookingStatusText : localized ,
       LastChangedAt,
+      LocalLastChangedAt,
       /* Associations */
       _BookingStatus,
       _BookingSupplement : redirected to composition child Z_C_BOOKSUP_DAF ,

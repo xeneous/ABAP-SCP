@@ -18,6 +18,8 @@ define view entity Z_I_BOOKING_DAF
       BookingStatus,
       @Semantics.systemDateTime.lastChangedAt: true
       LastChangedAt,
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      LocalLastChangedAt, 
       /* Associations */
       _BookingStatus,
       _BookingSupplement : redirected to composition child Z_I_BOOKSUP_DAF ,

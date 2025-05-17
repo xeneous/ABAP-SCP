@@ -14,6 +14,8 @@ define view entity Z_I_BOOKSUP_DAF
       CurrencyCode,
       @Semantics.systemDateTime.lastChangedAt: true
       LastChangedAt,
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      LocalLastChangedAt,
       /* Associations */
       _Booking : redirected to parent Z_I_BOOKING_DAF,
       _Product,

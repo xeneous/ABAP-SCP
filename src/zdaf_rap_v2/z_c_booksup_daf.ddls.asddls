@@ -37,6 +37,7 @@ define view entity Z_C_BOOKSUP_DAF
                                                         useForValidation: true } ]      
       CurrencyCode,
       LastChangedAt,
+      LocalLastChangedAt, 
       /* Associations */
       _Booking : redirected to parent Z_C_BOOKING_DAF,
       _Product,
