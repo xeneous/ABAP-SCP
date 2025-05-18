@@ -3,7 +3,7 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZBP_R_TRAVEL_DAF</CLSNAME>
+    <CLSNAME>ZBP_R_BOOKING_DAF</CLSNAME>
     <LANGU>E</LANGU>
     <DESCRIPT>Behavior Implementation for Z_R_TRAVEL_DAF</DESCRIPT>
     <CATEGORY>06</CATEGORY>

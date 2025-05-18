@@ -1,0 +1,46 @@
+interface;
+use draft;
+
+define behavior for Z_I_TRAVEL_DAF alias Travel
+{
+  use create;
+  use update;
+  use delete;
+
+  use action acceptTravel;
+  use action rejectTravel;
+  use action deductDiscount;
+  use action ValidateCustomerID;
+  use action ValidateAgencyID;
+  use action ValidateRangeDate;
+
+  use action Activate;
+  use action Discard;
+  use action Edit;
+  use action Resume;
+  use action Prepare;
+
+  use association _Booking { create; with draft; }
+}
+
+define behavior for Z_I_BOOKING_DAF alias Booking
+{
+  use update;
+  use delete;
+
+  use action ValidateFlightCosts;
+
+  use association _BookingSupplement { create; with draft; }
+  use association _Travel { with draft; }
+}
+
+define behavior for Z_I_BOOKSUP_DAF alias BookingSuplement
+{
+  use update;
+  use delete;
+
+  use action ValidateSupplementPrice;
+
+  use association _Travel { with draft; }
+  use association _Booking { with draft; }
+}

@@ -1,15 +1,5 @@
-class ZBP_R_TRAVEL_DAF definition
-  public
-  abstract
-  final
-  create public .
-
-public section.
-protected section.
-private section.
+CLASS zbp_r_travel_daf DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF z_r_travel_daf.
 ENDCLASS.
 
-
-
-CLASS ZBP_R_TRAVEL_DAF IMPLEMENTATION.
+CLASS zbp_r_travel_daf IMPLEMENTATION.
 ENDCLASS.

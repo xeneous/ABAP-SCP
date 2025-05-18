@@ -1,0 +1,5 @@
+CLASS zbp_r_bookingsup_daf DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF z_r_travel_daf.
+ENDCLASS.
+
+CLASS zbp_r_bookingsup_daf IMPLEMENTATION.
+ENDCLASS.
