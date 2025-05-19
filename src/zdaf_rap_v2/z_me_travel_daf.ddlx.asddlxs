@@ -42,20 +42,20 @@ annotate entity Z_C_TRAVEL_DAF with
   TravelUUID;
   @UI:{ lineItem: [{ position: 10, importance: #HIGH },
                     { type: #FOR_ACTION,
-                    dataAction: 'accepTravel',
+                    dataAction: 'acceptTravel',
                     label: 'Accept Travel'},
                     { type: #FOR_ACTION,
-                    dataAction: 'rejecTravel',
+                    dataAction: 'rejectTravel',
                     label: 'Reject Travel'},
                     { type: #FOR_ACTION,
                     dataAction: 'deductDiscount',
                     label: 'Discount'}],
         identification: [{ position: 10, importance: #HIGH },
                     { type: #FOR_ACTION,
-                    dataAction: 'accepTravel',
+                    dataAction: 'acceptTravel',
                     label: 'Accept Travel'},
                     { type: #FOR_ACTION,
-                    dataAction: 'rejecTravel',
+                    dataAction: 'rejectTravel',
                     label: 'Reject Travel'},
                     { type: #FOR_ACTION,
                     dataAction: 'deductDiscount',
@@ -107,7 +107,7 @@ annotate entity Z_C_TRAVEL_DAF with
     textArrangement: #TEXT_ONLY
   }
   OverallStatus;
-  
+
   @UI.hidden: true
   OverallStatusText;
   @UI.hidden: true
@@ -117,15 +117,15 @@ annotate entity Z_C_TRAVEL_DAF with
   @UI.hidden: true
   LastChangedAt;
   @UI.hidden: true
-  LastChangedBy;  
+  LastChangedBy;
   @UI.hidden: true
-  LocalLastChangedAt;  
-  
-  
-  
-  
-  
-  
-  
+  LocalLastChangedAt;
+
+
+
+
+
+
+
 
 }

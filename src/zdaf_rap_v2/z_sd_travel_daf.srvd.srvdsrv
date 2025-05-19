@@ -1,0 +1,6 @@
+@EndUserText.label: 'Travel'
+define service Z_SD_TRAVEL_DAF {
+  expose Z_C_TRAVEL_DAF  as Travel;
+  expose Z_C_BOOKING_DAF as Booking;
+  expose Z_C_BOOKSUP_DAF as BookSup;
+}

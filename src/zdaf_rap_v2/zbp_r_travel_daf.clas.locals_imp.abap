@@ -1,6 +1,13 @@
 CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
 
+    CONSTANTS:
+    begin of travel_status,
+        open type c LENGTH 1 value 'O',
+        accepted type c LENGTH 1 value 'A',
+        rejected type c LENGTH 1 value 'X',
+    END OF travel_status .
+
     METHODS get_instance_features FOR INSTANCE FEATURES
       IMPORTING keys REQUEST requested_features FOR Travel RESULT result.
 
@@ -63,6 +70,24 @@ CLASS lhc_Travel IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD acceptTravel.
+
+    MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+           ENTITY Travel
+           update fields ( OverallStatus )
+           with value #( for key in keys (  %tky = key-%tky
+                                            OverallStatus = travel_status-accepted
+           ) ).
+
+    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+    ENTITY Travel
+    ALL FIELDS WITH
+    CORRESPONDING #( keys )
+    RESULT data(travels) .
+
+    result = value #( for travel in travels (   %tky = travel-%tky
+                                                %param = travel )
+                                                  ) .
+
   ENDMETHOD.
 
   METHOD deductDiscount.
@@ -72,6 +97,22 @@ CLASS lhc_Travel IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD rejectTravel.
+      MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+           ENTITY Travel
+           update fields ( OverallStatus )
+           with value #( for key in keys (  %tky = key-%tky
+                                            OverallStatus = travel_status-rejected
+           ) ).
+
+    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+    ENTITY Travel
+    ALL FIELDS WITH
+    CORRESPONDING #( keys )
+    RESULT data(travels) .
+
+    result = value #( for travel in travels (   %tky = travel-%tky
+                                                %param = travel )
+                                                  ) .
   ENDMETHOD.
 
   METHOD Resume.
