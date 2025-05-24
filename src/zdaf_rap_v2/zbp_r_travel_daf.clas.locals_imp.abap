@@ -61,6 +61,33 @@ ENDCLASS.
 CLASS lhc_Travel IMPLEMENTATION.
 
   METHOD get_instance_features.
+
+    READ ENTITIES OF z_r_travel_daf in local mode
+    ENTITY Travel
+    FIELDS ( OverallStatus )
+    WITH CORRESPONDING #( keys )
+    RESULT DATA(TRAVELS) .
+
+    RESULT = VALUE #( FOR TRAvel in travels ( %tky = travel-%tky
+                                              %field-BookingFee = cond #( when travel-OverallStatus = travel_status-accepted
+                                                                      then if_abap_behv=>fc-f-read_only
+                                                                      else if_abap_behv=>fc-f-unrestricted )
+                                              %action-acceptTravel      = cond #( when travel-OverallStatus = travel_status-accepted
+                                                                          then if_abap_behv=>fc-o-disabled
+                                                                          else if_abap_behv=>fc-o-enabled )
+                                              %action-rejectTravel      = cond #( when travel-OverallStatus = travel_status-rejected
+                                                                          then if_abap_behv=>fc-o-disabled
+                                                                          else if_abap_behv=>fc-o-enabled )
+                                              %action-deductDiscount    = cond #( when travel-OverallStatus = travel_status-accepted
+                                                                          then if_abap_behv=>fc-o-disabled
+                                                                          else if_abap_behv=>fc-o-enabled )
+                                              %assoc-_Booking           = cond #( when travel-OverallStatus = travel_status-rejected
+                                                                          then if_abap_behv=>fc-o-disabled
+                                                                          else if_abap_behv=>fc-o-enabled ) )
+                                                                          ) .
+
+
+
   ENDMETHOD.
 
   METHOD get_instance_authorizations.
@@ -122,9 +149,48 @@ CLASS lhc_Travel IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD setStatusToOpen.
+
+    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+    ENTITY Travel
+    fields ( OverallStatus )
+    with CORRESPONDING #( keys )
+    RESULT data(travels) .
+
+    delete travels where OverallStatus is not initial.
+
+    CHECK travels is not initial .
+
+    MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+    ENTITY Travel
+    update fields ( TravelID )
+    with value #( for travel in travels index into i ( %tky = travel-%tky
+                                          OverallStatus = travel_status-open ) ) .
+
   ENDMETHOD.
 
   METHOD setTravelNumber.
+
+    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+    ENTITY Travel
+    fields ( TravelID )
+    with CORRESPONDING #( keys )
+    RESULT data(travels) .
+
+    delete travels where TravelID is not initial.
+
+    CHECK travels is not initial .
+
+    Select single from z_r_travel_daf
+        fields max( travelID ) as maxId
+        into @data(max_Travel_ID) .
+
+    MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+    ENTITY Travel
+    update fields ( TravelID )
+    with value #( for travel in travels index into i ( %tky = travel-%tky
+                                          TravelID = max_travel_id + i ) ) .
+
+
   ENDMETHOD.
 
   METHOD validateAgency.
@@ -137,6 +203,58 @@ CLASS lhc_Travel IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD validateCustomer.
+
+    data customers type SORTED TABLE OF /dmo/customer With UNIQUE KEY client customer_id .
+
+    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+    ENTITY Travel
+    fields ( CustomerID )
+    with CORRESPONDING #( keys )
+    RESULT data(travels) .
+
+    customers = CORRESPONDING #( travels DISCARDING DUPLICATES MAPPING customer_id = CustomerID except * ) .
+    delete customers where customer_id is initial .
+
+    if customers is not initial .
+
+        Select from /dmo/customer as db
+        inner join @customers as it on db~customer_id = it~customer_id
+        FIELDS db~customer_id
+        into table @data(valid_customers) .
+    endif .
+
+    loop at travels into data(travel) .
+
+        APPEND value #( %tky        = travel-%tky
+                        %state_area = 'VALIDATE_CUSTOMER' ) to reported-travel .
+
+        if travel-CustomerID is initial .
+            APPEND value #( %tky        = travel-%tky ) to failed-travel .
+
+            APPEND value #( %tky                    = travel-%tky
+                            %state_area             = 'VALIDATE_CUSTOMER'
+                            %msg                    = new /dmo/cm_flight_messages(  textid = /dmo/cm_flight_messages=>enter_customer_id
+                                                                                    severity = if_abap_behv_message=>severity-error )
+                            %element-CustomerID     = if_abap_behv=>mk-on
+                            ) to reported-travel .
+
+        elseif not line_exists( valid_customers[ customer_id = travel-CustomerID ] ) .
+
+            APPEND value #( %tky        = travel-%tky ) to failed-travel .
+
+            APPEND value #( %tky                    = travel-%tky
+                            %state_area             = 'VALIDATE_CUSTOMER'
+                            %msg                    = new /dmo/cm_flight_messages(  textid = /dmo/cm_flight_messages=>customer_unkown
+                                                                                    customer_id = travel-CustomerID
+                                                                                    severity = if_abap_behv_message=>severity-error )
+                            %element-CustomerID     = if_abap_behv=>mk-on
+                            ) to reported-travel .
+
+
+        endif .
+
+
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD validateDates.
