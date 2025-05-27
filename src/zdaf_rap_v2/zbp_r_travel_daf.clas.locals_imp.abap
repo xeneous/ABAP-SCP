@@ -2,14 +2,17 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
 
     CONSTANTS:
-    begin of travel_status,
-        open type c LENGTH 1 value 'O',
-        accepted type c LENGTH 1 value 'A',
-        rejected type c LENGTH 1 value 'X',
-    END OF travel_status .
+      BEGIN OF travel_status,
+        open     TYPE c LENGTH 1 VALUE 'O',
+        accepted TYPE c LENGTH 1 VALUE 'A',
+        rejected TYPE c LENGTH 1 VALUE 'X',
+      END OF travel_status .
 
     METHODS get_instance_features FOR INSTANCE FEATURES
       IMPORTING keys REQUEST requested_features FOR Travel RESULT result.
+
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR Travel RESULT result.
 
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR Travel RESULT result.
@@ -62,28 +65,28 @@ CLASS lhc_Travel IMPLEMENTATION.
 
   METHOD get_instance_features.
 
-    READ ENTITIES OF z_r_travel_daf in local mode
+    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
     ENTITY Travel
     FIELDS ( OverallStatus )
     WITH CORRESPONDING #( keys )
-    RESULT DATA(TRAVELS) .
+    RESULT DATA(travels) .
 
-    RESULT = VALUE #( FOR TRAvel in travels ( %tky = travel-%tky
-                                              %field-BookingFee = cond #( when travel-OverallStatus = travel_status-accepted
-                                                                      then if_abap_behv=>fc-f-read_only
-                                                                      else if_abap_behv=>fc-f-unrestricted )
-                                              %action-acceptTravel      = cond #( when travel-OverallStatus = travel_status-accepted
-                                                                          then if_abap_behv=>fc-o-disabled
-                                                                          else if_abap_behv=>fc-o-enabled )
-                                              %action-rejectTravel      = cond #( when travel-OverallStatus = travel_status-rejected
-                                                                          then if_abap_behv=>fc-o-disabled
-                                                                          else if_abap_behv=>fc-o-enabled )
-                                              %action-deductDiscount    = cond #( when travel-OverallStatus = travel_status-accepted
-                                                                          then if_abap_behv=>fc-o-disabled
-                                                                          else if_abap_behv=>fc-o-enabled )
-                                              %assoc-_Booking           = cond #( when travel-OverallStatus = travel_status-rejected
-                                                                          then if_abap_behv=>fc-o-disabled
-                                                                          else if_abap_behv=>fc-o-enabled ) )
+    result = VALUE #( FOR TRAvel IN travels ( %tky = travel-%tky
+                                              %field-BookingFee = COND #( WHEN travel-OverallStatus = travel_status-accepted
+                                                                      THEN if_abap_behv=>fc-f-read_only
+                                                                      ELSE if_abap_behv=>fc-f-unrestricted )
+                                              %action-acceptTravel      = COND #( WHEN travel-OverallStatus = travel_status-accepted
+                                                                          THEN if_abap_behv=>fc-o-disabled
+                                                                          ELSE if_abap_behv=>fc-o-enabled )
+                                              %action-rejectTravel      = COND #( WHEN travel-OverallStatus = travel_status-rejected
+                                                                          THEN if_abap_behv=>fc-o-disabled
+                                                                          ELSE if_abap_behv=>fc-o-enabled )
+                                              %action-deductDiscount    = COND #( WHEN travel-OverallStatus = travel_status-accepted
+                                                                          THEN if_abap_behv=>fc-o-disabled
+                                                                          ELSE if_abap_behv=>fc-o-enabled )
+                                              %assoc-_Booking           = COND #( WHEN travel-OverallStatus = travel_status-rejected
+                                                                          THEN if_abap_behv=>fc-o-disabled
+                                                                          ELSE if_abap_behv=>fc-o-enabled ) )
                                                                           ) .
 
 
@@ -91,173 +94,309 @@ CLASS lhc_Travel IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_instance_authorizations.
-  ENDMETHOD.
 
-  METHOD precheck_create.
-  ENDMETHOD.
-
-  METHOD acceptTravel.
-
-    MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
-           ENTITY Travel
-           update fields ( OverallStatus )
-           with value #( for key in keys (  %tky = key-%tky
-                                            OverallStatus = travel_status-accepted
-           ) ).
+    " Nothing to do with the CREATE operation .
+    DATA: update_requested TYPE abap_bool,
+          update_granted   TYPE abap_bool,
+          delete_requested TYPE abap_bool,
+          delete_granted   TYPE abap_bool.
 
     READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
     ENTITY Travel
-    ALL FIELDS WITH
-    CORRESPONDING #( keys )
-    RESULT data(travels) .
+    FIELDS ( AgencyID )
+    WITH CORRESPONDING #( keys )
+    RESULT DATA(travels) .
 
-    result = value #( for travel in travels (   %tky = travel-%tky
-                                                %param = travel )
-                                                  ) .
+    update_requested = COND #( WHEN requested_authorizations-%update        = if_abap_behv=>mk-on
+                                 OR requested_authorizations-%action-Edit   = if_abap_behv=>mk-on
+                               THEN abap_true
+                               ELSE abap_false ).
 
-  ENDMETHOD.
+    delete_requested = COND #( WHEN requested_authorizations-%delete        = if_abap_behv=>mk-on
+                                   THEN abap_true
+                                   ELSE abap_false ).
 
-  METHOD deductDiscount.
-  ENDMETHOD.
+    DATA(lv_technical_name) = cl_abap_context_info=>get_user_technical_name(  ).
 
-  METHOD reCalcTotalPrice.
-  ENDMETHOD.
+    LOOP AT travels INTO DATA(travel).
 
-  METHOD rejectTravel.
+      IF travel-AgencyID IS NOT INITIAL .
+
+        IF update_requested EQ abap_true .
+
+          IF travel-AgencyID NE '70014' .  " Hard Code AgencyID 70014
+            update_granted = abap_true .
+          ELSE .
+            update_granted = abap_false .
+
+            APPEND VALUE #(     %tky                    = travel-%tky
+                                %msg                    = NEW /dmo/cm_flight_messages(  textid      = /dmo/cm_flight_messages=>not_authorized_for_agencyid
+                                                                                        agency_id   = travel-AgencyID
+                                                                                        severity    = if_abap_behv_message=>severity-error )
+                                %element-AgencyID     = if_abap_behv=>mk-on
+                      ) TO reported-travel .
+          ENDIF .
+        ENDIF .
+
+        IF delete_requested EQ abap_true .
+
+          IF travel-AgencyID NE '70014' .
+            delete_granted = abap_true .
+          ELSE .
+            delete_granted = abap_false .
+
+            APPEND VALUE #(     %tky                    = travel-%tky
+                                %msg                    = NEW /dmo/cm_flight_messages(  textid      = /dmo/cm_flight_messages=>not_authorized_for_agencyid
+                                                                                        agency_id   = travel-AgencyID
+                                                                                        severity    = if_abap_behv_message=>severity-error )
+                                %element-AgencyID     = if_abap_behv=>mk-on
+                      ) TO reported-travel .
+          ENDIF .
+        ENDIF .
+
+      endif .
+
+      data: upd_auth_t TYPE abp_behv_auth,
+            del_auth_t TYPE abp_behv_auth .
+
+
+      APPEND value #( let   upd_auth = cond #( when update_granted = abap_true
+                                               then if_abap_behv=>auth-allowed
+                                               else if_abap_behv=>auth-unauthorized )
+                            del_auth = cond #( when delete_granted = abap_true
+                                               then if_abap_behv=>auth-allowed
+                                               else if_abap_behv=>auth-unauthorized )
+                      in %tky           = travel-%tky
+                         %update        = upd_auth
+                         %action-Edit   = upd_auth
+                         %delete        = del_auth ) to result .
+
+
+
+
+      ENDLOOP.
+
+
+
+
+    ENDMETHOD.
+
+    METHOD precheck_create.
+    ENDMETHOD.
+
+    METHOD acceptTravel.
+
+      MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+             ENTITY Travel
+             UPDATE FIELDS ( OverallStatus )
+             WITH VALUE #( FOR key IN keys (  %tky = key-%tky
+                                              OverallStatus = travel_status-accepted
+             ) ).
+
+      READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+      ENTITY Travel
+      ALL FIELDS WITH
+      CORRESPONDING #( keys )
+      RESULT DATA(travels) .
+
+      result = VALUE #( FOR travel IN travels (   %tky = travel-%tky
+                                                  %param = travel )
+                                                    ) .
+
+    ENDMETHOD.
+
+    METHOD deductDiscount.
+    ENDMETHOD.
+
+    METHOD reCalcTotalPrice.
+    ENDMETHOD.
+
+    METHOD rejectTravel.
       MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
            ENTITY Travel
-           update fields ( OverallStatus )
-           with value #( for key in keys (  %tky = key-%tky
+           UPDATE FIELDS ( OverallStatus )
+           WITH VALUE #( FOR key IN keys (  %tky = key-%tky
                                             OverallStatus = travel_status-rejected
            ) ).
 
-    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
-    ENTITY Travel
-    ALL FIELDS WITH
-    CORRESPONDING #( keys )
-    RESULT data(travels) .
+      READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+      ENTITY Travel
+      ALL FIELDS WITH
+      CORRESPONDING #( keys )
+      RESULT DATA(travels) .
 
-    result = value #( for travel in travels (   %tky = travel-%tky
-                                                %param = travel )
-                                                  ) .
-  ENDMETHOD.
+      result = VALUE #( FOR travel IN travels (   %tky = travel-%tky
+                                                  %param = travel )
+                                                    ) .
+    ENDMETHOD.
 
-  METHOD Resume.
-  ENDMETHOD.
+    METHOD Resume.
+    ENDMETHOD.
 
-  METHOD calculateTotalPrice.
-  ENDMETHOD.
+    METHOD calculateTotalPrice.
+    ENDMETHOD.
 
-  METHOD setStatusToOpen.
+    METHOD setStatusToOpen.
 
-    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
-    ENTITY Travel
-    fields ( OverallStatus )
-    with CORRESPONDING #( keys )
-    RESULT data(travels) .
+      READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+      ENTITY Travel
+      FIELDS ( OverallStatus )
+      WITH CORRESPONDING #( keys )
+      RESULT DATA(travels) .
 
-    delete travels where OverallStatus is not initial.
+      DELETE travels WHERE OverallStatus IS NOT INITIAL.
 
-    CHECK travels is not initial .
+      CHECK travels IS NOT INITIAL .
 
-    MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
-    ENTITY Travel
-    update fields ( TravelID )
-    with value #( for travel in travels index into i ( %tky = travel-%tky
-                                          OverallStatus = travel_status-open ) ) .
+      MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+      ENTITY Travel
+      UPDATE FIELDS ( TravelID )
+      WITH VALUE #( FOR travel IN travels INDEX INTO i ( %tky = travel-%tky
+                                            OverallStatus = travel_status-open ) ) .
 
-  ENDMETHOD.
+    ENDMETHOD.
 
-  METHOD setTravelNumber.
+    METHOD setTravelNumber.
 
-    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
-    ENTITY Travel
-    fields ( TravelID )
-    with CORRESPONDING #( keys )
-    RESULT data(travels) .
+      READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+      ENTITY Travel
+      FIELDS ( TravelID )
+      WITH CORRESPONDING #( keys )
+      RESULT DATA(travels) .
 
-    delete travels where TravelID is not initial.
+      DELETE travels WHERE TravelID IS NOT INITIAL.
 
-    CHECK travels is not initial .
+      CHECK travels IS NOT INITIAL .
 
-    Select single from z_r_travel_daf
-        fields max( travelID ) as maxId
-        into @data(max_Travel_ID) .
+      SELECT SINGLE FROM z_r_travel_daf
+          FIELDS MAX( travelID ) AS maxId
+          INTO @DATA(max_Travel_ID) .
 
-    MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
-    ENTITY Travel
-    update fields ( TravelID )
-    with value #( for travel in travels index into i ( %tky = travel-%tky
-                                          TravelID = max_travel_id + i ) ) .
-
-
-  ENDMETHOD.
-
-  METHOD validateAgency.
-  ENDMETHOD.
-
-  METHOD validateBookingFee.
-  ENDMETHOD.
-
-  METHOD validateCurrency.
-  ENDMETHOD.
-
-  METHOD validateCustomer.
-
-    data customers type SORTED TABLE OF /dmo/customer With UNIQUE KEY client customer_id .
-
-    READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
-    ENTITY Travel
-    fields ( CustomerID )
-    with CORRESPONDING #( keys )
-    RESULT data(travels) .
-
-    customers = CORRESPONDING #( travels DISCARDING DUPLICATES MAPPING customer_id = CustomerID except * ) .
-    delete customers where customer_id is initial .
-
-    if customers is not initial .
-
-        Select from /dmo/customer as db
-        inner join @customers as it on db~customer_id = it~customer_id
-        FIELDS db~customer_id
-        into table @data(valid_customers) .
-    endif .
-
-    loop at travels into data(travel) .
-
-        APPEND value #( %tky        = travel-%tky
-                        %state_area = 'VALIDATE_CUSTOMER' ) to reported-travel .
-
-        if travel-CustomerID is initial .
-            APPEND value #( %tky        = travel-%tky ) to failed-travel .
-
-            APPEND value #( %tky                    = travel-%tky
-                            %state_area             = 'VALIDATE_CUSTOMER'
-                            %msg                    = new /dmo/cm_flight_messages(  textid = /dmo/cm_flight_messages=>enter_customer_id
-                                                                                    severity = if_abap_behv_message=>severity-error )
-                            %element-CustomerID     = if_abap_behv=>mk-on
-                            ) to reported-travel .
-
-        elseif not line_exists( valid_customers[ customer_id = travel-CustomerID ] ) .
-
-            APPEND value #( %tky        = travel-%tky ) to failed-travel .
-
-            APPEND value #( %tky                    = travel-%tky
-                            %state_area             = 'VALIDATE_CUSTOMER'
-                            %msg                    = new /dmo/cm_flight_messages(  textid = /dmo/cm_flight_messages=>customer_unkown
-                                                                                    customer_id = travel-CustomerID
-                                                                                    severity = if_abap_behv_message=>severity-error )
-                            %element-CustomerID     = if_abap_behv=>mk-on
-                            ) to reported-travel .
+        MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+        ENTITY Travel
+        UPDATE FIELDS ( TravelID )
+        WITH VALUE #( FOR travel IN travels INDEX INTO i ( %tky = travel-%tky
+                                              TravelID = max_travel_id + i ) ) .
 
 
-        endif .
+      ENDMETHOD.
+
+      METHOD validateAgency.
+      ENDMETHOD.
+
+      METHOD validateBookingFee.
+      ENDMETHOD.
+
+      METHOD validateCurrency.
+      ENDMETHOD.
+
+      METHOD validateCustomer.
+
+        DATA customers TYPE SORTED TABLE OF /dmo/customer WITH UNIQUE KEY client customer_id .
+
+        READ ENTITIES OF z_r_travel_daf IN LOCAL MODE
+        ENTITY Travel
+        FIELDS ( CustomerID )
+        WITH CORRESPONDING #( keys )
+        RESULT DATA(travels) .
+
+        customers = CORRESPONDING #( travels DISCARDING DUPLICATES MAPPING customer_id = CustomerID EXCEPT * ) .
+        DELETE customers WHERE customer_id IS INITIAL .
+
+        IF customers IS NOT INITIAL .
+
+          SELECT FROM /dmo/customer AS db
+          INNER JOIN @customers AS it ON db~customer_id = it~customer_id
+          FIELDS db~customer_id
+          INTO TABLE @DATA(valid_customers) .
+          ENDIF .
+
+          LOOP AT travels INTO DATA(travel) .
+
+            APPEND VALUE #( %tky        = travel-%tky
+                            %state_area = 'VALIDATE_CUSTOMER' ) TO reported-travel .
+
+            IF travel-CustomerID IS INITIAL .
+              APPEND VALUE #( %tky        = travel-%tky ) TO failed-travel .
+
+              APPEND VALUE #( %tky                    = travel-%tky
+                              %state_area             = 'VALIDATE_CUSTOMER'
+                              %msg                    = NEW /dmo/cm_flight_messages(  textid = /dmo/cm_flight_messages=>enter_customer_id
+                                                                                      severity = if_abap_behv_message=>severity-error )
+                              %element-CustomerID     = if_abap_behv=>mk-on
+                              ) TO reported-travel .
+
+            ELSEIF NOT line_exists( valid_customers[ customer_id = travel-CustomerID ] ) .
+
+              APPEND VALUE #( %tky        = travel-%tky ) TO failed-travel .
+
+              APPEND VALUE #( %tky                    = travel-%tky
+                              %state_area             = 'VALIDATE_CUSTOMER'
+                              %msg                    = NEW /dmo/cm_flight_messages(  textid = /dmo/cm_flight_messages=>customer_unkown
+                                                                                      customer_id = travel-CustomerID
+                                                                                      severity = if_abap_behv_message=>severity-error )
+                              %element-CustomerID     = if_abap_behv=>mk-on
+                              ) TO reported-travel .
 
 
-    ENDLOOP.
-  ENDMETHOD.
+            ENDIF .
 
-  METHOD validateDates.
-  ENDMETHOD.
+
+          ENDLOOP.
+        ENDMETHOD.
+
+        METHOD validateDates.
+        ENDMETHOD.
+
+        METHOD get_global_authorizations.
+
+          DATA(lv_technical_name) = cl_abap_context_info=>get_user_technical_name(  ).
+
+          IF requested_authorizations-%create EQ if_abap_behv=>mk-on .
+            IF lv_technical_name = lv_technical_name .
+              result-%create = if_abap_behv=>auth-allowed .
+            ELSE .
+              result-%create = if_abap_behv=>auth-unauthorized .
+
+              APPEND VALUE #( %msg    = NEW /dmo/cm_flight_messages(  textid      = /dmo/cm_flight_messages=>not_authorized
+                                                                      severity    = if_abap_behv_message=>severity-error )
+                              %global = if_abap_behv=>mk-on ) TO reported-travel.
+
+
+            ENDIF.
+          ENDIF.
+
+          IF requested_authorizations-%delete EQ if_abap_behv=>mk-on .
+            IF lv_technical_name = lv_technical_name .
+              result-%delete = if_abap_behv=>auth-allowed .
+            ELSE .
+              result-%delete = if_abap_behv=>auth-unauthorized .
+
+              APPEND VALUE #( %msg    = NEW /dmo/cm_flight_messages(  textid      = /dmo/cm_flight_messages=>not_authorized
+                                                                      severity    = if_abap_behv_message=>severity-error )
+                              %global = if_abap_behv=>mk-on ) TO reported-travel.
+
+
+            ENDIF.
+          ENDIF.
+
+          IF  requested_authorizations-%update EQ if_abap_behv=>mk-on OR
+              requested_authorizations-%action-Edit EQ if_abap_behv=>mk-on.
+
+            IF lv_technical_name = lv_technical_name .
+              result-%update = result-%action-Edit = if_abap_behv=>auth-allowed .
+            ELSE .
+              result-%update = result-%action-Edit = if_abap_behv=>auth-unauthorized .
+
+              APPEND VALUE #( %msg    = NEW /dmo/cm_flight_messages(  textid      = /dmo/cm_flight_messages=>not_authorized
+                                                                      severity    = if_abap_behv_message=>severity-error )
+                              %global = if_abap_behv=>mk-on ) TO reported-travel.
+
+
+            ENDIF.
+          ENDIF.
+
+
+        ENDMETHOD.
 
 ENDCLASS.

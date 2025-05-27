@@ -19,6 +19,8 @@
     }]
 }
 
+//@UI.createHidden: true " Oculta Boton de create
+
 
 annotate entity Z_C_TRAVEL_DAF with
 {
@@ -98,6 +100,11 @@ annotate entity Z_C_TRAVEL_DAF with
   @UI: {
     lineItem: [{ position: 80, importance: #HIGH }],
     identification: [{position: 80  }]
+  }
+  PriceWithVAT;
+  @UI: {
+    lineItem: [{ position: 82, importance: #HIGH }],
+    identification: [{position: 82  }]
   }
   Description;
   @UI: {
