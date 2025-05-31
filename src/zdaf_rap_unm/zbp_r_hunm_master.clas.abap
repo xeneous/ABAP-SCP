@@ -1,0 +1,5 @@
+CLASS zbp_r_hunm_master DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF z_r_hunm_master.
+ENDCLASS.
+
+CLASS zbp_r_hunm_master IMPLEMENTATION.
+ENDCLASS.

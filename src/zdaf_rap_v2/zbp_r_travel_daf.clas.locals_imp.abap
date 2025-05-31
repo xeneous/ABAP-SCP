@@ -32,6 +32,18 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS rejectTravel FOR MODIFY
       IMPORTING keys FOR ACTION Travel~rejectTravel RESULT result.
 
+        types:
+          t_keys_accept   type table for action import z_r_travel_daf\\travel~acceptTravel,
+          t_keys_reject   type table for action import z_r_travel_daf\\travel~rejectTravel,
+
+          t_result_accept type table for action result z_r_travel_daf\\travel~acceptTravel,
+          t_result_reject type table for action result z_r_travel_daf\\travel~rejectTravel.
+
+    methods changeTravelStatus importing keys_accept   type t_keys_accept optional
+                                         keys_reject   type t_keys_reject optional
+                               exporting result_accept type t_result_accept
+                                         result_reject type t_result_reject.
+
     METHODS Resume FOR MODIFY
       IMPORTING keys FOR ACTION Travel~Resume.
 
@@ -206,9 +218,144 @@ CLASS lhc_Travel IMPLEMENTATION.
     ENDMETHOD.
 
     METHOD deductDiscount.
+
+        data travels_for_update type TABLE FOR update z_r_travel_daf .
+
+        data(keys_with_valid_discount) = keys .
+
+        loop at keys_with_valid_discount ASSIGNING FIELD-SYMBOL(<key_with_valid_discount>)
+            where %param-discount_percentage is initial
+               or %param-discount_percentage > 100
+               or %param-discount_percentage = 0 .
+
+            APPEND value #(  %tky = <key_with_valid_discount>-%tky ) to failed-travel .
+
+            APPEND value #(  %tky                           = <key_with_valid_discount>-%tky
+                         %msg                           = new   /dmo/cm_flight_messages(
+                                                                textid = /dmo/cm_flight_messages=>discount_invalid
+                                                                severity = if_abap_behv_message=>severity-error )
+                         %element-TotalPrice            = if_abap_behv=>mk-on
+                         %op-%action-deductDIscount     = if_abap_behv=>mk-on
+                         ) to reported-travel .
+
+            DELETE keys_with_valid_discount .
+
+        ENDLOOP.
+
+        check keys_with_valid_discount is not initial .
+
+        read entities of z_r_travel_daf IN LOCAL MODE
+            ENTITY Travel
+            fields ( BookingFee )
+            WITH CORRESPONDING #( keys_with_valid_discount )
+            RESULT DATA(travels) .
+
+        LOOP AT travels ASSIGNING FIELD-SYMBOL(<travel>).
+            data percentage TYPE decfloat16 .
+            data(discount_percent) = keys_with_valid_discount[ key id %tky = <travel>-%tky ]-%param-discount_percentage .
+            percentage = discount_percent / 100 .
+            data(reduced_fee) = <travel>-BookingFee * ( 1 - percentage ) .
+
+            append value   #(  %tky = <travel>-%tky
+                             BookingFee = reduced_fee
+                            ) to travels_for_update .
+
+        ENDLOOP.
+
+        "update total price with reduced price
+        modify ENTITIES OF z_r_travel_daf in local mode
+            ENTITY Travel
+            update fields ( BookingFee )
+            with travels_for_update .
+
+        "read changed data for action result
+        read entities of z_r_travel_daf IN LOCAL MODE
+            ENTITY Travel
+            all fields with
+            CORRESPONDING #( travels )
+            RESULT DATA(travels_with_discount) .
+
+        result = value #( for travel in travels_with_discount ( %tky = travel-%tky
+                                                                %param = travel ) ) .
+
+
     ENDMETHOD.
 
     METHOD reCalcTotalPrice.
+
+    types: begin of ty_amount_per_currencycode,
+             amount        type /dmo/total_price,
+             currency_code type /dmo/currency_code,
+           end of ty_amount_per_currencycode.
+
+    data: amount_per_currencycode type standard table of ty_amount_per_currencycode.
+
+    read entities of z_r_travel_daf in local mode
+         entity Travel
+         fields ( BookingFee CurrencyCode )
+         with corresponding #( keys )
+         result data(travels).
+
+    delete travels where CurrencyCode is initial.
+
+    loop at travels assigning field-symbol(<travel>).
+
+      " Set the start for the calculation by adding the booking fee.
+      amount_per_currencycode = value #( ( amount        = <travel>-BookingFee
+                                           currency_code = <travel>-CurrencyCode ) ).
+
+      " Read all associated bookings
+      read entities of z_r_travel_daf in local mode
+           entity Travel by \_Booking
+           fields ( FlightPrice CurrencyCode )
+           with value #( ( %tky = <travel>-%tky ) )
+           result data(bookings).
+
+      " Add bookings to the total price.
+      loop at bookings into data(booking) where CurrencyCode is not initial.
+        collect value ty_amount_per_currencycode( amount        = booking-FlightPrice
+                                                  currency_code = booking-CurrencyCode ) into amount_per_currencycode.
+      endloop.
+
+      " Read all associated booking supplements
+      read entities of z_r_travel_daf in local mode
+        entity Booking by \_BookingSupplement
+          fields ( Price CurrencyCode )
+        with value #( for rba_booking in bookings ( %tky = rba_booking-%tky ) )
+        result data(bookingsupplements).
+
+      " Add booking supplements to the total price.
+      loop at bookingsupplements into data(bookingsupplement) where CurrencyCode is not initial.
+        collect value ty_amount_per_currencycode( amount        = bookingsupplement-Price
+                                                  currency_code = bookingsupplement-CurrencyCode ) into amount_per_currencycode.
+      endloop.
+
+      clear <travel>-TotalPrice.
+      loop at amount_per_currencycode into data(single_amount_per_currencycode).
+        " Currency Conversion
+        if single_amount_per_currencycode-currency_code = <travel>-CurrencyCode.
+          <travel>-TotalPrice += single_amount_per_currencycode-amount.
+        else.
+          /dmo/cl_flight_amdp=>convert_currency(
+             exporting
+               iv_amount                   =  single_amount_per_currencycode-amount
+               iv_currency_code_source     =  single_amount_per_currencycode-currency_code
+               iv_currency_code_target     =  <travel>-CurrencyCode
+               iv_exchange_rate_date       =  cl_abap_context_info=>get_system_date( )
+             importing
+               ev_amount                   = data(total_booking_price_per_curr)
+            ).
+          <travel>-TotalPrice += total_booking_price_per_curr.
+        endif.
+      endloop.
+    endloop.
+
+    " update the modified total_price of travels
+    MODIFY ENTITIES OF z_r_travel_daf IN LOCAL MODE
+      ENTITY travel
+        UPDATE FIELDS ( TotalPrice )
+        WITH CORRESPONDING #( travels ).
+
     ENDMETHOD.
 
     METHOD rejectTravel.
@@ -234,6 +381,12 @@ CLASS lhc_Travel IMPLEMENTATION.
     ENDMETHOD.
 
     METHOD calculateTotalPrice.
+
+        modify entities of z_r_travel_daf in local mode
+           entity Travel
+           execute reCalcTotalPrice
+           from corresponding #( keys ).
+
     ENDMETHOD.
 
     METHOD setStatusToOpen.
@@ -398,5 +551,9 @@ CLASS lhc_Travel IMPLEMENTATION.
 
 
         ENDMETHOD.
+
+  METHOD changetravelstatus.
+
+  ENDMETHOD.
 
 ENDCLASS.

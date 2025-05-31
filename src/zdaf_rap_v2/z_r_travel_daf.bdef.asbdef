@@ -13,7 +13,7 @@ etag master LocalLastChangedAt
 
 {
   create ( precheck );
-  update;
+  update ( precheck );
   delete;
   association _Booking { create ( features : instance ); with draft; }
 

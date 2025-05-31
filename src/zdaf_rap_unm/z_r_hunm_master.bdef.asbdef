@@ -1,0 +1,16 @@
+unmanaged implementation in class zbp_r_hunm_master unique;
+strict ( 2 );
+
+define behavior for Z_R_HUNM_MASTER alias HUNMMASTER
+//late numbering
+lock master
+authorization master ( instance )
+//etag master <field_name>
+{
+  create ( authorization : global );
+  update;
+  delete;
+  field ( readonly ) EmployeeNumber ;
+  field (mandatory : create) EmployeeName ;
+
+}
