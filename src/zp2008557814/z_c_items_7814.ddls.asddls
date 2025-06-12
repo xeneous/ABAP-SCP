@@ -2,23 +2,24 @@
 @EndUserText.label: 'Items Consumption Entity'
 @Metadata.ignorePropagatedAnnotations: true
 define view entity Z_C_ITEMS_7814
-  provider contract transactional_query
   as projection on Z_R_ITEMS_7814
 {
   key Id,
   key Item,
       Name,
       Description,
-      Releasedate,
-      Discontinueddate,
+      ReleaseDate,
+      DiscontinuedDate,
       Price,
-      @Semantics.quantity.unitOfMeasure: 'Unitofmeasure'
+      @Semantics.quantity.unitOfMeasure: 'UnitOfMeasure'
       Height,
-      @Semantics.quantity.unitOfMeasure: 'Unitofmeasure'
+      @Semantics.quantity.unitOfMeasure: 'UnitOfMeasure'
       Width,
       Depth,
       Quantity,
-      Unitofmeasure,
+      UnitOfMeasure,
+      LastChangedAt,
+      LocalLastChangedAt,
       /* Associations */
-      _Header
+      _Header : redirected to parent Z_C_HEADER_7814
 }

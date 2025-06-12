@@ -9,16 +9,20 @@ define view entity Z_I_ITEMS_7814
   key Item,
       Name,
       Description,
-      Releasedate,
-      Discontinueddate,
+      ReleaseDate,
+      DiscontinuedDate,
       Price,
-      @Semantics.quantity.unitOfMeasure: 'Unitofmeasure'
+      @Semantics.quantity.unitOfMeasure: 'UnitOfMeasure'
       Height,
-      @Semantics.quantity.unitOfMeasure: 'Unitofmeasure'
+      @Semantics.quantity.unitOfMeasure: 'UnitOfMeasure'
       Width,
       Depth,
       Quantity,
-      Unitofmeasure,
+      UnitOfMeasure,
+      @Semantics.systemDateTime.lastChangedAt: true
+      LastChangedAt,
+      @Semantics.systemDateTime.localInstanceLastChangedAt: true
+      LocalLastChangedAt, 
       /* Associations */
       _Header
 }
