@@ -10,7 +10,8 @@
 define view entity Z_R_BOOKING_DAF
   as select from ztb_booking_daf
 
-  association        to parent Z_R_TRAVEL_DAF    as _Travel        on  $projection.TravelUUID = _Travel.TravelUUID
+  association        to parent Z_R_TRAVEL_DAF    as _Travel        
+    on  $projection.TravelUUID = _Travel.TravelUUID
   composition [0..*] of Z_R_BOOKSUP_DAF          as _BookingSupplement
 
   association [1..1] to /DMO/I_Carrier           as _Carrier       on  $projection.AirlineID = _Carrier.AirlineID

@@ -70,6 +70,8 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS validateDates FOR VALIDATE ON SAVE
       IMPORTING keys FOR Travel~validateDates.
+    METHODS precheck_update FOR PRECHECK
+      IMPORTING entities FOR UPDATE Travel.
 
 ENDCLASS.
 
@@ -554,6 +556,9 @@ CLASS lhc_Travel IMPLEMENTATION.
 
   METHOD changetravelstatus.
 
+  ENDMETHOD.
+
+  METHOD precheck_update.
   ENDMETHOD.
 
 ENDCLASS.

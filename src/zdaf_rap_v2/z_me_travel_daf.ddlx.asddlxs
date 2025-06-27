@@ -24,7 +24,7 @@
 
 annotate entity Z_C_TRAVEL_DAF with
 {
-  // para navegar
+//   para navegar
   @UI.facet: [{   id: 'Travel',
                   purpose: #STANDARD,
                   type: #IDENTIFICATION_REFERENCE,

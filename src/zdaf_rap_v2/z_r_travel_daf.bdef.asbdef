@@ -65,11 +65,11 @@ etag master LocalLastChangedAt
     determine action ValidateRangeDate executed on field BeginDate, field EndDate affects messages;
   }
 
-  // Habilita opcion Activate
+//   Habilita opcion Activate
   draft action Activate optimized;
-  //  Habilita opcion Discard
+//    Habilita opcion Discard
   draft action Discard;
-  //  Habilita opcion Edit
+//    Habilita opcion Edit
   draft action Edit;
   draft action Resume with additional implementation;
 
